@@ -1,10 +1,14 @@
-import streamlit as st
-import requests
+"""Streamlit frontend for AskTheDocs app."""
 from pathlib import Path
 
+import requests
+import streamlit as st
+
+
 def main():
+    """Run streamlit app main entrypoint."""
     st.title("AskTheDocs 🦆")
-    
+
     # ---------------------------------------------------
     # Section 1: PDF File Upload & Document Ingestion
     # ---------------------------------------------------
@@ -37,12 +41,8 @@ def main():
             try:
                 # Note: file_obj is a Streamlit UploadedFile, not a local path
                 # but we can still pass its `read()` content to requests.
-                files = {
-                    "file": file_obj.getvalue()
-                }
-                data = {
-                    "doc_id": Path(file_obj.name).name
-                }
+                files = {"file": file_obj.getvalue()}
+                data = {"doc_id": Path(file_obj.name).name}
                 response = requests.post(ingest_url, data=data, files=files)
                 response.raise_for_status()
                 st.write(f"Ingested: {file_obj.name}")
@@ -89,26 +89,29 @@ def main():
         try:
             query_response = requests.post(query_url, json=payload)
             query_response.raise_for_status()
-            
+
             response_json = query_response.json()
-            # Extract relevant fields                      
+            # Extract relevant fields
             answer_text = response_json.get("answer_text", "No answer text found.")
             answer_sources = response_json.get("answer_sources", [])
             bot_answer = (
-                "✅ ANSWER\n\n" 
+                "✅ ANSWER\n\n"
                 + f"{answer_text}\n\n"
                 + "ℹ️ SOURCES\n\n"
                 + "\n".join(f"ℹ️ {source}" for source in answer_sources)
             )
 
         except requests.exceptions.RequestException as e:
-            bot_answer = f"Error calling the API: {e} --- Sent query: {prompt} ---- URL used: {query_url}"
+            bot_answer = (
+                f"Error calling the API: {e} --- Sent query: {prompt} ---- URL used: {query_url}"
+            )
 
         # Display the assistant's response
         with st.chat_message("assistant"):
             st.text(bot_answer)
 
         st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
 
 if __name__ == "__main__":
     main()

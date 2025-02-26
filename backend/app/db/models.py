@@ -1,13 +1,14 @@
 """ORM models for the database."""
-from sqlalchemy import Column, Integer, Text
-from sqlalchemy.dialects import postgresql
-from pgvector.sqlalchemy import Vector
-
 from app.core.config import app_config
 from app.db.base import Base
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Column, Integer, Text
+from sqlalchemy.dialects import postgresql
+
 
 class Chunk(Base):
-    """ORM model of a document chunk, including metadata and vector embedding"""
+    """ORM model of a document chunk, including metadata and vector embedding."""
+
     __tablename__ = "chunks"
 
     chunk_id = Column(Integer, primary_key=True, index=True)
