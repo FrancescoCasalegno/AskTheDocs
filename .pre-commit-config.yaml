@@ -49,5 +49,5 @@ repos:
         name: Prettier
         entry: prettier --write
         language: node
-        types: [json]
+        types: [json, yaml]
         additional_dependencies: ["prettier@latest"]
