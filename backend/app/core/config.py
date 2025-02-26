@@ -1,9 +1,11 @@
-"""Set up app configuration from env variables"""
-from pydantic_settings import BaseSettings
+"""Set up app configuration from env variables."""
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
+
 
 class AppConfig(BaseSettings):
-    """App configuration"""
+    """App configuration."""
+
     LOGGING_LEVEL: int = 1
     POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
@@ -25,6 +27,7 @@ class AppConfig(BaseSettings):
 
     @field_validator("LOGGING_LEVEL")
     def validate_logging_level(cls, value):
+        """Validate the logging level value."""
         if value not in [0, 1, 2]:
             raise ValueError(f"Invalid log level {value}. Must be one of [0, 1, 2].")
         return value

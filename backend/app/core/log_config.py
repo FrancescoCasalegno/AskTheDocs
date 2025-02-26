@@ -1,3 +1,4 @@
+"""Logging configuration."""
 import logging
 import sys
 
@@ -37,4 +38,3 @@ def set_logging_options(level: int) -> None:
 
     # Set the logging level for the root logger to the mapped level
     logging.root.setLevel(log_level)
-
