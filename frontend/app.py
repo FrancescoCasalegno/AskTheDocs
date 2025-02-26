@@ -24,30 +24,29 @@ def main():
 
     # If the file list changed, we do the ingestion flow:
     if current_file_names != st.session_state.uploaded_file_names:
-        st.write("Detected change in uploaded files. Updating ingestion...")
-
-        # 1. DELETE all existing chunks
-        delete_url = "http://fastapi-backend:8000/v1/delete_all_chunks"
-        try:
-            delete_response = requests.delete(delete_url)
-            delete_response.raise_for_status()  # Raise an error for non-2xx codes
-            st.write("Successfully deleted all chunks.")
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error deleting all chunks: {e}")
-
-        # 2. Ingest all newly uploaded files
-        ingest_url = "http://fastapi-backend:8000/v1/ingest_document"
-        for file_obj in uploaded_files:
+        with st.spinner("Updating documents database... Please wait ⏳"):
+            # 1. Clean up database
+            delete_url = "http://fastapi-backend:8000/v1/delete_all_chunks"
             try:
-                # Note: file_obj is a Streamlit UploadedFile, not a local path
-                # but we can still pass its `read()` content to requests.
-                files = {"file": file_obj.getvalue()}
-                data = {"doc_id": Path(file_obj.name).name}
-                response = requests.post(ingest_url, data=data, files=files)
-                response.raise_for_status()
-                st.write(f"Ingested: {file_obj.name}")
+                delete_response = requests.delete(delete_url)
+                delete_response.raise_for_status()  # Raise an error for non-2xx codes
+            except requests.exceptions.RequestException as e:
+                st.error(f"Error deleting all chunks: {e}")
+
+            # 2. Ingest documents in database
+            ingest_url = "http://fastapi-backend:8000/v1/ingest_document"
+            try:
+                for file_obj in uploaded_files:
+                    # Note: file_obj is a Streamlit UploadedFile, not a local path
+                    # but we can still pass its `read()` content to requests.
+                    files = {"file": file_obj.getvalue()}
+                    data = {"doc_id": Path(file_obj.name).name}
+                    response = requests.post(ingest_url, data=data, files=files)
+                    response.raise_for_status()
             except requests.exceptions.RequestException as e:
                 st.error(f"Error ingesting {file_obj.name}: {e}")
+
+        st.success(f"Successfully uploaded {len(uploaded_files)} files to database ✅")
 
         # Update session_state
         st.session_state.uploaded_file_names = current_file_names
