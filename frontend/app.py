@@ -102,7 +102,7 @@ def main():
             )
 
         except requests.exceptions.RequestException as e:
-            bot_answer = f"Error calling the API: {e}"
+            bot_answer = f"Error calling the API: {e} --- Sent query: {prompt} ---- URL used: {query_url}"
 
         # Display the assistant's response
         with st.chat_message("assistant"):

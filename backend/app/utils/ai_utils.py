@@ -1,8 +1,10 @@
 from openai import OpenAI
-openai_client = OpenAI()
+from typing import Type
+from pydantic import BaseModel
 
 from app.core.config import app_config
 
+openai_client = OpenAI()
 
 def embed_text(text: str, model: str = app_config.OPENAI_EMBEDDING_MODEL):
     """
@@ -15,14 +17,23 @@ def embed_text(text: str, model: str = app_config.OPENAI_EMBEDDING_MODEL):
     return response.data[0].embedding
 
 
-def get_answer_from_llm(system_prompt: str, user_prompt: str, model: str = app_config.OPENAI_TEXT_GENERATION_MODEL):
+def get_answer_from_llm(
+        system_prompt: str, 
+        user_prompt: str, 
+        model: str = app_config.OPENAI_TEXT_GENERATION_MODEL,
+        llm_response_model: Type[BaseModel] | None = None
+        ):
     """Generate an answer from LLM."""
-    response = openai_client.chat.completions.create(
-        model=model,
-        messages=[
+    kwargs = {
+        "model": model,
+        "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        temperature=0.0,
-    )
+        "temperature": 0.0,
+    }
+    if llm_response_model:
+        kwargs["response_format"] = llm_response_model
+    
+    response = openai_client.beta.chat.completions.parse(**kwargs)
     return response.choices[0].message.content

@@ -30,6 +30,10 @@ class QueryResponse(BaseModel):
     answer_sources: List[str]
     top_k_retrieved: int
 
+class LLMResponseModel(BaseModel):
+    answer_text: str
+    answer_sources: List[str]
+
 
 def get_db():
     db = SessionLocal()
@@ -87,20 +91,21 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):
         "Otherwise, provide the best possible answer AND provide one or more verbatim source quotes "
         "from the context that justify the answer."
         "Output format should be a JSON in the following format:"
-        "{'answer': '...', 'sources': ['...', '...']}"
+        "{'answer_text': '...', 'answer_sources': ['...', '...']}"
     )
     user_prompt = f"QUESTION: {req.query}\n\nCONTEXT:\n" + "\n\n---\n\n".join(contexts)
 
     # 4) call GPT
     try:
-        answer = get_answer_from_llm(system_prompt, user_prompt)
+        answer = get_answer_from_llm(system_prompt, user_prompt, llm_response_model=LLMResponseModel)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error calling GPT model: {str(e)}")
 
     logger.info(f"Raw answer from LLM: {answer}")
 
-    answer = json.loads(answer)
-    answer_text, answer_sources = answer["answer"], answer["sources"]
+    # answer = json.loads(answer)
+    answer: LLMResponseModel = json.loads(answer)
+    answer_text, answer_sources = answer["answer_text"], answer["answer_sources"]
 
     return QueryResponse(
         answer_text=answer_text,
