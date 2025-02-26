@@ -15,16 +15,6 @@
   <img src="https://img.shields.io/badge/license-Apache--2.0-lightgreen.svg" alt="Apache-2.0 license"/>
 </p>
 
-- [AskTheDocs 🦆](#askthedocs-)
-  - [Getting Started](#getting-started)
-    - [Docker Setup](#docker-setup)
-    - [OpenAI Setup](#openai-setup)
-    - [Env Variables](#env-variables)
-    - [Running the Application](#running-the-application)
-  - [How Does It Work?](#how-does-it-work)
-    - [RAG Architecture](#rag-architecture)
-    - [Components](#components)
-
 # AskTheDocs 🦆
 
 **AskTheDocs 🦆** leverages LLMs and AI to allow users to upload and query documents in a simple and easy-to-use UI. Once documents are uploaded, users can ask questions in a Chatbot interface.
