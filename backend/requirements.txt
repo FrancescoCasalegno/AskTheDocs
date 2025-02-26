@@ -1,0 +1,10 @@
+docling==2.24.0
+fastapi==0.115.8
+openai==1.64.0
+pgvector==0.3.6
+psycopg2==2.9.10
+pydantic==2.10.6
+pydantic-settings==2.8.0
+python-multipart==0.0.20
+SQLAlchemy==2.0.38
+uvicorn==0.34.0

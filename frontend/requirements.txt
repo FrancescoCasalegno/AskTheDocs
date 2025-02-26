@@ -1,0 +1,4 @@
+docling==2.24.0
+openai==1.64.0
+streamlit==1.42.2
+streamlit-pdf-viewer==0.0.21
