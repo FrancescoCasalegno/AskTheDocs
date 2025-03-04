@@ -46,6 +46,7 @@ def ingest_document(
         pdf_filename=file.filename,
         pdf_bytes=pdf_bytes,
         chunker=chunker,
+        logger=logger,
     )
     logger.info("Successfully parsed and chunked the document.")
 
