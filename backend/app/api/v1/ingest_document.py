@@ -3,6 +3,7 @@ from logging import getLogger
 
 from app.core.config import app_config
 from app.core.log_config import set_logging_options
+from app.core.middleware import job_id_contextvar
 from app.db.models import Chunk
 from app.db.session import get_db
 from app.utils.ai_utils import embed_text
@@ -32,7 +33,11 @@ def ingest_document(
     4) Replace existing doc_id data or inserts new
     5) Return success
     """
-    logger.info(f"Ingesting document with doc_id: {doc_id} and filename: {file.filename}")
+    job_id = job_id_contextvar.get()
+    logger.info(
+        f"[Job ID: {job_id}] Ingesting document "
+        f"with doc_id: {doc_id} and filename: {file.filename}"
+    )
     # Read the PDF bytes
     pdf_bytes = file.file.read()
     if not pdf_bytes:
@@ -40,7 +45,7 @@ def ingest_document(
     file.file.close()
 
     # Parse & chunk
-    logger.info("Parsing and chunking the document...")
+    logger.info(f"[Job ID: {job_id}] Parsing and chunking the document...")
     chunker = HybridChunker()
     chunk_objects = parse_and_chunk_pdf(
         pdf_filename=file.filename,
@@ -48,10 +53,10 @@ def ingest_document(
         chunker=chunker,
         logger=logger,
     )
-    logger.info("Successfully parsed and chunked the document.")
+    logger.info(f"[Job ID: {job_id}] Successfully parsed and chunked the document.")
 
     # Single transaction
-    logger.info("Start transaction: Inserting new rows into Chunk table...")
+    logger.info(f"[Job ID: {job_id}] Start transaction: Inserting new rows into Chunk table...")
     try:
         # Check if doc_id already exists
         existing = db.query(Chunk).filter(Chunk.doc_id == doc_id).first()
@@ -84,10 +89,10 @@ def ingest_document(
 
         db.commit()
     except Exception as e:
-        logger.error(f"Error inserting new rows into Chunk table: {str(e)}")
+        logger.error(f"[Job ID: {job_id}] Error inserting new rows into Chunk table: {str(e)}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-    logger.info("Successfully inserted new rows into Chunk table.")
+    logger.info(f"[Job ID: {job_id}] Successfully inserted new rows into Chunk table.")
 
     return {"status": "success", "doc_id": doc_id}
