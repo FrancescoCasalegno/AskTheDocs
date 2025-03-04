@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 set_logging_options(level=app_config.LOGGING_LEVEL)
 logger = getLogger(__name__)
 
-
 query_router = APIRouter()
 
 
