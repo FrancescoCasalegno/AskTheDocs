@@ -62,23 +62,24 @@ async def ingest_document(
             delete_query = delete(Chunk).filter(Chunk.doc_id == doc_id)
             await db.execute(delete_query)
 
-        # Insert new chunk rows
+        # Insert new chunk rows with their embeddings
+        # 1. Create embedding tasks to run asynchronously
+        async_tasks = []
         for chunk_obj in chunk_objects:
             serialized = chunker.serialize(chunk=chunk_obj)
+            async_tasks.append(embed_text(serialized))
+        # 2. Run tasks concurrently
+        embeddings = await asyncio.gather(*async_tasks)
+        # 3. Create and add new rows to the database
+        for chunk_obj, embedding_vector in zip(chunk_objects, embeddings):
             pages = sorted(
                 {prov.page_no for item in chunk_obj.meta.doc_items for prov in item.prov}
             )
-            section_headers = list(chunk_obj.meta.headings)
-            origin_filename = chunk_obj.meta.origin.filename or file.filename
-            origin_uri = chunk_obj.meta.origin.uri or ""
-
-            embedding_vector = await embed_text(serialized)
-
             new_row = Chunk(
                 doc_id=doc_id,
-                origin_filename=origin_filename,
-                origin_uri=origin_uri,
-                section_headers=section_headers,
+                origin_filename=chunk_obj.meta.origin.filename or file.filename,
+                origin_uri=chunk_obj.meta.origin.uri or "",
+                section_headers=list(chunk_obj.meta.headings),
                 pages=pages,
                 serialized_chunk=serialized,
                 embedding=embedding_vector,
