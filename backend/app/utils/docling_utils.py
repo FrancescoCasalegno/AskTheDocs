@@ -1,6 +1,7 @@
 """Utilities for parsing and chunking documents using docling library."""
 import io
 from logging import Logger
+from pathlib import Path
 
 from docling.backend.docling_parse_v2_backend import DoclingParseV2DocumentBackend
 from docling.chunking import BaseChunker
@@ -14,7 +15,8 @@ def parse_and_chunk_pdf(
 ) -> list:
     """Parse PDF using docling, chunk it, return chunk objects."""
     logger.info(f"Parsing document {pdf_filename} ...")
-    pipeline_options = PdfPipelineOptions()
+    docling_models_path = Path.home() / ".cache" / "docling" / "models"
+    pipeline_options = PdfPipelineOptions(artifacts_path=docling_models_path)
     pipeline_options.do_ocr = True
     pipeline_options.do_table_structure = True
 
