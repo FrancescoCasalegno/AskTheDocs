@@ -9,7 +9,7 @@ from app.utils.ai_utils import embed_text, get_answer_from_llm
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = getLogger(__name__)
 
