@@ -63,7 +63,11 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
     top_contexts = db.execute(stmt).scalars().all()
 
     if not top_contexts:
-        return {"answer": "UNANSWERABLE", "reason": "No context found in DB."}
+        return QueryResponse(
+            answer_text="UNANSWERABLE [No contexts found by Retriever]",
+            answer_sources=[],
+            top_k_retrieved=0,
+        )
 
     # 3) build context
     contexts = []
