@@ -17,14 +17,13 @@ set_logging_options(level=app_config.LOGGING_LEVEL)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Context manager to handle application startup and shutdown."""
-    # 1. Startup
-    # Initialize DB, create tables, install pgvector extension
-    init_db()
+    # 1. Startup (initialize db, etc.)
+    await init_db()
 
-    yield  # run the application
+    # 2. Run the application
+    yield
 
-    # 2. Shutdown
-    # (Any cleanup if needed)
+    # 3. Shutdown and cleanup (if needed)
     pass
 
 

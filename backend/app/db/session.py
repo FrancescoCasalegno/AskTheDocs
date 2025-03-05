@@ -1,27 +1,31 @@
 """Database session setup."""
 from app.core.config import app_config
 from app.db.base import Base
-from sqlalchemy import create_engine, sql
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import sql
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-engine = create_engine(url=app_config.POSTGRES_DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_async_engine(url=app_config.POSTGRES_DATABASE_URL, echo=False)
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine, autocommit=False, autoflush=False, expire_on_commit=False
+)
 
 
-def init_db():
+async def init_db():
     """Initialize database with extensions and tables."""
-    # Install the `vector` (aka pgvector) extension if it doesn't exist
-    with SessionLocal() as session:
-        session.execute(sql.text("CREATE EXTENSION IF NOT EXISTS vector"))
-        session.commit()
-    # Create the tables if they don't exist
-    Base.metadata.create_all(bind=engine)
+    async with engine.begin() as conn:
+        # 1. Install the pgvector extension
+        await conn.execute(sql.text("CREATE EXTENSION IF NOT EXISTS vector"))
+
+        # 2. Create tables if they don't exist
+        # Use run_sync() to run synchronous code in an async context!
+        await conn.run_sync(Base.metadata.create_all)
 
 
-def get_db():
-    """Context manager to handle database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db_session():
+    """Async context manager for database session."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            # The session is closed automatically by exiting the 'async with' block
+            pass
