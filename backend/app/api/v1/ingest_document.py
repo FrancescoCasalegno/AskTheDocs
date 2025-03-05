@@ -42,7 +42,7 @@ async def ingest_document(
     logger.info("Parsing and chunking the document...")
     chunker = HybridChunker()
     # Run parsing in a separate thread, because it's slow (CPU-bound)
-    chunk_objects = asyncio.to_thread(
+    chunk_objects = await asyncio.to_thread(
         parse_and_chunk_pdf,
         pdf_filename=file.filename,
         pdf_bytes=pdf_bytes,
