@@ -2,6 +2,18 @@
 import logging
 import sys
 
+from app.core.middleware import job_id_contextvar
+
+
+class JobIDLogFilter(logging.Filter):
+    """Logging filter to add the job ID to log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Run log record filtering logic."""
+        job_id = job_id_contextvar.get()
+        record.job_id = job_id if job_id else "-"
+        return True
+
 
 def set_logging_options(level: int) -> None:
     """Set the logging options based on the level parameter.
@@ -27,13 +39,19 @@ def set_logging_options(level: int) -> None:
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
-    log_format = "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d:%(funcName)s(): %(message)s"
+    # Formatting options
+    job_id_filter = JobIDLogFilter()
+    log_format = (
+        "%(asctime)s [%(levelname)s] %(name)s:%(lineno)d:%(funcName)s(): "
+        "[job_id=%(job_id)s] %(message)s"
+    )
     date_format = "%Y-%m-%d %H:%M:%S"
 
     # Set the handlers
     handlers = [logging.StreamHandler(sys.stdout)]
     for handler in handlers:
         handler.setFormatter(logging.Formatter(fmt=log_format, datefmt=date_format))
+        handler.addFilter(job_id_filter)
         logging.root.addHandler(handler)
 
     # Set the logging level for the root logger to the mapped level

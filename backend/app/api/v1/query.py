@@ -3,9 +3,6 @@ import json
 from logging import getLogger
 from typing import List, Optional
 
-from app.core.config import app_config
-from app.core.log_config import set_logging_options
-from app.core.middleware import job_id_contextvar
 from app.db.models import Chunk
 from app.db.session import get_db
 from app.utils.ai_utils import embed_text, get_answer_from_llm
@@ -14,7 +11,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-set_logging_options(level=app_config.LOGGING_LEVEL)
 logger = getLogger(__name__)
 
 query_router = APIRouter()
@@ -52,8 +48,7 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
     3) Call LLM with the top_k context
     4) Return the answer
     """
-    job_id = job_id_contextvar.get()
-    logger.info(f"[Job ID: {job_id}] Received query: {req.query}")
+    logger.info(f"Received query: {req.query}")
 
     # 1) embed the query
     try:
@@ -80,7 +75,7 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
         )
         contexts.append(snippet)
 
-    logger.info(f"[Job ID: {job_id}] Retrieved top_k contexts:\n" + "\n\n---\n\n".join(contexts))
+    logger.info("Retrieved top_k contexts:\n" + "\n\n---\n\n".join(contexts))
 
     # Create a system message
     system_prompt = (
@@ -102,7 +97,7 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error calling GPT model: {str(e)}")
 
-    logger.info(f"[Job ID: {job_id}] Raw answer from LLM: {answer}")
+    logger.info(f"Raw answer from LLM: {answer}")
 
     # answer = json.loads(answer)
     answer: LLMResponseModel = json.loads(answer)

@@ -4,9 +4,14 @@ from contextlib import asynccontextmanager
 from app.api.v1.delete_all_chunks import delete_all_chunks_router
 from app.api.v1.ingest_document import ingest_document_router
 from app.api.v1.query import query_router
+from app.core.config import app_config
+from app.core.log_config import set_logging_options
 from app.core.middleware import JobIdMiddleware
 from app.db.session import init_db
 from fastapi import FastAPI
+
+# Set logging options and formatting
+set_logging_options(level=app_config.LOGGING_LEVEL)
 
 
 @asynccontextmanager
