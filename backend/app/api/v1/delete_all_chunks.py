@@ -1,15 +1,12 @@
 """Endpoint for deleting all rows from the database."""
 from logging import getLogger
 
-from app.core.config import app_config
-from app.core.log_config import set_logging_options
 from app.db.models import Chunk
 from app.db.session import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-set_logging_options(level=app_config.LOGGING_LEVEL)
 logger = getLogger(__name__)
 
 delete_all_chunks_router = APIRouter()

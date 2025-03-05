@@ -3,8 +3,6 @@ import json
 from logging import getLogger
 from typing import List, Optional
 
-from app.core.config import app_config
-from app.core.log_config import set_logging_options
 from app.db.models import Chunk
 from app.db.session import get_db
 from app.utils.ai_utils import embed_text, get_answer_from_llm
@@ -13,7 +11,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-set_logging_options(level=app_config.LOGGING_LEVEL)
 logger = getLogger(__name__)
 
 query_router = APIRouter()
