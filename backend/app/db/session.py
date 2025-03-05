@@ -24,8 +24,4 @@ async def init_db():
 async def get_db_session():
     """Async context manager for database session."""
     async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            # The session is closed automatically by exiting the 'async with' block
-            pass
+        yield session
