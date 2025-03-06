@@ -4,12 +4,12 @@ from logging import getLogger
 from typing import List, Optional
 
 from app.db.models import Chunk
-from app.db.session import get_db
+from app.db.session import get_db_session
 from app.utils.ai_utils import embed_text, get_answer_from_llm
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = getLogger(__name__)
 
@@ -39,7 +39,9 @@ class LLMResponseModel(BaseModel):
 
 
 @query_router.post("/v1/query", response_model=QueryResponse)
-def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: B008
+async def query_documents(
+    req: QueryRequest, db: AsyncSession = Depends(get_db_session)  # noqa: B008
+):
     """Query a vector database and return an answer based on retrieved contexts.
 
     Breakdown:
@@ -52,18 +54,25 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
 
     # 1) embed the query
     try:
-        query_embedding = embed_text(req.query)
+        query_embedding = await embed_text(req.query)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error embedding query: {str(e)}")
 
     # 2) vector search using pgvector & SQLAlchemy
     # We'll use .l2_distance(query_embedding) and order_by ascending
     distance = Chunk.embedding.l2_distance(query_embedding)
-    stmt = select(Chunk).order_by(distance.asc()).limit(req.top_k)  # smallest distance first
-    top_contexts = db.execute(stmt).scalars().all()
+    select_query = select(Chunk).order_by(distance.asc()).limit(req.top_k)
+    result = await db.execute(select_query)
+    top_contexts = result.scalars().all()
 
     if not top_contexts:
-        return {"answer": "UNANSWERABLE", "reason": "No context found in DB."}
+        logger.warning(f"No contexts found for query: {req.query}")
+        logger.warning(f"result: {vars(result)}")
+        return QueryResponse(
+            answer_text="UNANSWERABLE [No contexts found by Retriever]",
+            answer_sources=[],
+            top_k_retrieved=0,
+        )
 
     # 3) build context
     contexts = []
@@ -75,7 +84,9 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
         )
         contexts.append(snippet)
 
-    logger.info("Retrieved top_k contexts:\n" + "\n\n---\n\n".join(contexts))
+    logger.info(f"Retrieved top_k contexts (k={len(contexts)})")
+    for i, c in enumerate(contexts, start=1):
+        logger.info(f"Context {i} / {len(contexts)}:\n{c}")
 
     # Create a system message
     system_prompt = (
@@ -91,7 +102,7 @@ def query_documents(req: QueryRequest, db: Session = Depends(get_db)):  # noqa: 
 
     # 4) call GPT
     try:
-        answer = get_answer_from_llm(
+        answer = await get_answer_from_llm(
             system_prompt, user_prompt, llm_response_model=LLMResponseModel
         )
     except Exception as e:

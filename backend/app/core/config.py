@@ -20,8 +20,9 @@ class AppConfig(BaseSettings):
     @property
     def POSTGRES_DATABASE_URL(self) -> str:
         """Postgres database URL, based on the other app configuration."""
+        # Use postgresql+asyncpg:// to let SQLAlchemy know we're using asyncpg
         return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
