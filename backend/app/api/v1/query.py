@@ -3,6 +3,7 @@ import json
 from logging import getLogger
 from typing import List, Optional
 
+import app.utils.ai_prompts as ai_prompts
 from app.db.models import Chunk
 from app.db.session import get_db_session
 from app.utils.ai_utils import embed_text, get_answer_from_llm
@@ -88,17 +89,11 @@ async def query_documents(
     for i, c in enumerate(contexts, start=1):
         logger.info(f"Context {i} / {len(contexts)}:\n{c}")
 
-    # Create a system message
-    system_prompt = (
-        "You are an expert question-answering model. "
-        "Given the following question and the following context, "
-        "you MUST say 'UNANSWERABLE' if the question cannot be answered from the context. "
-        "Otherwise, provide the best possible answer AND provide one or more verbatim "
-        "source quotes from the context that justify the answer."
-        "Output format should be a JSON in the following format:"
-        "{'answer_text': '...', 'answer_sources': ['...', '...']}"
+    # Create prompt for LLM
+    system_prompt = ai_prompts.QUESTION_ANSWERING_SYSTEM_PROMPT
+    user_prompt = ai_prompts.QUESTION_ANSWERING_USER_PROMPT_TEMPLATE.format(
+        question=req.query, context="\n---------------------------------\n".join(contexts)
     )
-    user_prompt = f"QUESTION: {req.query}\n\nCONTEXT:\n" + "\n\n---\n\n".join(contexts)
 
     # 4) call GPT
     try:
