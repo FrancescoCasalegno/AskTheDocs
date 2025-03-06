@@ -14,7 +14,7 @@ def parse_and_chunk_pdf(
     pdf_filename: str, pdf_bytes: bytes, chunker: BaseChunker, logger: Logger
 ) -> list:
     """Parse PDF using docling, chunk it, return chunk objects."""
-    logger.info(f"Parsing document {pdf_filename} ...")
+    logger.info(f"Parsing document {repr(pdf_filename)} ...")
     docling_models_path = Path.home() / ".cache" / "docling" / "models"
     pipeline_options = PdfPipelineOptions(artifacts_path=docling_models_path)
     pipeline_options.do_ocr = True
@@ -30,8 +30,8 @@ def parse_and_chunk_pdf(
 
     document_stream = DocumentStream(name=pdf_filename, stream=io.BytesIO(pdf_bytes))
     document = converter.convert(document_stream).document
-    logger.info("Successfully parsed the document.")
-    logger.info(f"Chunking document {pdf_filename} ...")
-    chunks = chunker.chunk(document)
-    logger.info("Successfully chunked the document.")
+    logger.info(f"Successfully parsed document {repr(pdf_filename)}.")
+    logger.info(f"Chunking document {repr(pdf_filename)} ...")
+    chunks = list(chunker.chunk(document))
+    logger.info(f"Successfully chunked document {repr(pdf_filename)} into {len(chunks)} chunks.")
     return chunks

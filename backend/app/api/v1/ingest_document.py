@@ -65,13 +65,17 @@ async def ingest_document(
         # Insert new chunk rows with their embeddings
         # 1. Create embedding tasks to run asynchronously
         async_tasks = []
+        serialized_chunks = []
         for chunk_obj in chunk_objects:
-            serialized = chunker.serialize(chunk=chunk_obj)
-            async_tasks.append(embed_text(serialized))
+            serialized_chunk = chunker.serialize(chunk=chunk_obj)
+            serialized_chunks.append(serialized_chunk)
+            async_tasks.append(embed_text(serialized_chunk))
         # 2. Run tasks concurrently
         embeddings = await asyncio.gather(*async_tasks)
         # 3. Create and add new rows to the database
-        for chunk_obj, embedding_vector in zip(chunk_objects, embeddings):
+        for chunk_obj, serialized_chunk, embedding_vector in zip(
+            chunk_objects, serialized_chunks, embeddings
+        ):
             pages = sorted(
                 {prov.page_no for item in chunk_obj.meta.doc_items for prov in item.prov}
             )
@@ -81,9 +85,10 @@ async def ingest_document(
                 origin_uri=chunk_obj.meta.origin.uri or "",
                 section_headers=list(chunk_obj.meta.headings),
                 pages=pages,
-                serialized_chunk=serialized,
+                serialized_chunk=serialized_chunk,
                 embedding=embedding_vector,
             )
+            logger.info(f"Adding new row: {new_row}")
             db.add(new_row)
 
         await db.commit()
@@ -92,6 +97,6 @@ async def ingest_document(
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-    logger.info("Successfully inserted new rows into Chunk table.")
+    logger.info(f"Successfully inserted {len(chunk_objects)} new rows into Chunk table.")
 
     return {"status": "success", "doc_id": doc_id}

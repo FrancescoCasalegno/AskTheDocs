@@ -62,9 +62,12 @@ async def query_documents(
     # We'll use .l2_distance(query_embedding) and order_by ascending
     distance = Chunk.embedding.l2_distance(query_embedding)
     select_query = select(Chunk).order_by(distance.asc()).limit(req.top_k)
-    top_contexts = await (db.execute(select_query)).scalars().all()
+    result = await db.execute(select_query)
+    top_contexts = result.scalars().all()
 
     if not top_contexts:
+        logger.warning(f"No contexts found for query: {req.query}")
+        logger.warning(f"result: {vars(result)}")
         return QueryResponse(
             answer_text="UNANSWERABLE [No contexts found by Retriever]",
             answer_sources=[],
@@ -81,7 +84,9 @@ async def query_documents(
         )
         contexts.append(snippet)
 
-    logger.info("Retrieved top_k contexts:\n" + "\n\n---\n\n".join(contexts))
+    logger.info(f"Retrieved top_k contexts (k={len(contexts)})")
+    for i, c in enumerate(contexts, start=1):
+        logger.info(f"Context {i} / {len(contexts)}:\n{c}")
 
     # Create a system message
     system_prompt = (
