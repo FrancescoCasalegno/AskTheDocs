@@ -46,22 +46,41 @@ async def query_documents(
     """Query a vector database and return an answer based on retrieved contexts.
 
     Breakdown:
-    1) Embed the query
-    2) Vector search in 'chunks' table
-    3) Call LLM with the top_k context
-    4) Return the answer
+    1. Context Retrieval
+    2. Answer Generation
     """
     logger.info(f"Received query: {req.query}")
 
-    # 1) embed the query
+    # 1. Context Retrieval
+    # 1.1 Generate query
+    user_question = req.query
+    conversation = [
+        {
+            "role": "user",
+            "message": user_question,
+        }
+    ]
+    system_prompt = ai_prompts.QUERY_GENERATION_SYSTEM_PROMPT
+    user_prompt = ai_prompts.QUERY_GENERATION_USER_PROMPT_TEMPLATE.format(
+        conversation=json.dumps(conversation, indent=2)
+    )
     try:
-        query_embedding = await embed_text(req.query)
+        retriever_query = await get_answer_from_llm(
+            system_prompt, user_prompt, llm_response_model=None
+        )
+        logger.info(f"Generated query for retriever: {retriever_query}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error calling GPT model: {str(e)}")
+
+    # 1.2 Embed the query
+    try:
+        retriever_query_embedding = await embed_text(retriever_query)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error embedding query: {str(e)}")
 
-    # 2) vector search using pgvector & SQLAlchemy
+    # 2.2 Search vector database using the query embedding
     # We'll use .l2_distance(query_embedding) and order_by ascending
-    distance = Chunk.embedding.l2_distance(query_embedding)
+    distance = Chunk.embedding.l2_distance(retriever_query_embedding)
     select_query = select(Chunk).order_by(distance.asc()).limit(req.top_k)
     result = await db.execute(select_query)
     top_contexts = result.scalars().all()
@@ -75,7 +94,8 @@ async def query_documents(
             top_k_retrieved=0,
         )
 
-    # 3) build context
+    # 2. Answer Generation
+    # 2.1 Format context
     contexts = []
     for chunk in top_contexts:
         snippet = (
@@ -89,13 +109,13 @@ async def query_documents(
     for i, c in enumerate(contexts, start=1):
         logger.info(f"Context {i} / {len(contexts)}:\n{c}")
 
-    # Create prompt for LLM
+    # 2.2 Create prompt for LLM
     system_prompt = ai_prompts.QUESTION_ANSWERING_SYSTEM_PROMPT
     user_prompt = ai_prompts.QUESTION_ANSWERING_USER_PROMPT_TEMPLATE.format(
         question=req.query, context="\n---------------------------------\n".join(contexts)
     )
 
-    # 4) call GPT
+    # 2.3 Send request to LLM
     try:
         answer = await get_answer_from_llm(
             system_prompt, user_prompt, llm_response_model=LLMResponseModel
@@ -105,10 +125,11 @@ async def query_documents(
 
     logger.info(f"Raw answer from LLM: {answer}")
 
-    # answer = json.loads(answer)
-    answer: LLMResponseModel = json.loads(answer)
-    answer_text, answer_sources = answer["answer_text"], answer["answer_sources"]
+    llm_answer = LLMResponseModel(**json.loads(answer))
+    answer_text = f"[RAG QUERY] {retriever_query}\n[ANSWER] {llm_answer.answer_text}"
 
     return QueryResponse(
-        answer_text=answer_text, answer_sources=answer_sources, top_k_retrieved=len(top_contexts)
+        answer_text=answer_text,
+        answer_sources=llm_answer.answer_sources,
+        top_k_retrieved=len(top_contexts),
     )
