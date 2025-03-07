@@ -1,6 +1,4 @@
 """Streamlit frontend for AskTheDocs app."""
-from pathlib import Path
-
 import requests
 import streamlit as st
 
@@ -39,14 +37,12 @@ def main():
                 for file_obj in uploaded_files:
                     # Note: file_obj is a Streamlit UploadedFile, not a local path
                     # but we can still pass its `read()` content to requests.
-                    files = {"file": file_obj.getvalue()}
-                    data = {"doc_id": Path(file_obj.name).name}
-                    response = requests.post(ingest_url, data=data, files=files)
+                    files = {"file": (file_obj.name, file_obj.getvalue(), "application/pdf")}
+                    response = requests.post(ingest_url, files=files)
                     response.raise_for_status()
+                    st.success(f"Successfully uploaded {len(uploaded_files)} files to database ✅")
             except requests.exceptions.RequestException as e:
                 st.error(f"Error ingesting {file_obj.name}: {e}")
-
-        st.success(f"Successfully uploaded {len(uploaded_files)} files to database ✅")
 
         # Update session_state
         st.session_state.uploaded_file_names = current_file_names

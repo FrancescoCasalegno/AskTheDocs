@@ -7,7 +7,7 @@ from app.db.session import get_db_session
 from app.utils.ai_utils import embed_text
 from app.utils.docling_utils import parse_and_chunk_pdf
 from docling.chunking import HybridChunker
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,22 +18,21 @@ ingest_document_router = APIRouter()
 
 @ingest_document_router.post("/v1/ingest_document")
 async def ingest_document(
-    doc_id: str = Form(...),  # noqa: B008
     file: UploadFile = File(...),  # noqa: B008
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ):
     """Ingest a document into the database.
 
     Breakdown:
-    1) Receive PDF file + doc_id
+    1) Receive PDF file
     2) Parse/Chunk document
     3) Embed each chunk
-    4) Replace existing doc_id data or inserts new
+    4) Replace existing doc_name data or inserts new
     5) Return success
     """
-    logger.info(f"Ingesting document with doc_id: {doc_id} and filename: {file.filename}")
-    # Read the PDF bytes
     pdf_bytes = await file.read()
+    doc_name = file.filename
+    logger.info(f"Ingesting document with doc_name: {doc_name}")
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty or invalid.")
     await file.close()
@@ -54,12 +53,12 @@ async def ingest_document(
     # Single transaction
     logger.info("Start transaction: Inserting new rows into Chunk table...")
     try:
-        # Check if doc_id already exists
-        select_query = select(Chunk).filter(Chunk.doc_id == doc_id)
+        # Check if doc_name already exists
+        select_query = select(Chunk).filter(Chunk.doc_name == doc_name)
         existing = (await db.execute(select_query)).scalars().first()
         if existing:
-            # Delete old rows with this doc_id
-            delete_query = delete(Chunk).filter(Chunk.doc_id == doc_id)
+            # Delete old rows with this doc_name
+            delete_query = delete(Chunk).filter(Chunk.doc_name == doc_name)
             await db.execute(delete_query)
 
         # Insert new chunk rows with their embeddings
@@ -82,9 +81,7 @@ async def ingest_document(
                 {prov.page_no for item in chunk_obj.meta.doc_items for prov in item.prov}
             )
             new_row = Chunk(
-                doc_id=doc_id,
-                origin_filename=chunk_obj.meta.origin.filename or file.filename,
-                origin_uri=chunk_obj.meta.origin.uri or "",
+                doc_name=doc_name,
                 section_headers=list(chunk_obj.meta.headings or []),
                 pages=pages,
                 serialized_chunk=serialized_chunk,
@@ -101,4 +98,4 @@ async def ingest_document(
 
     logger.info(f"Successfully inserted {len(chunk_objects)} new rows into Chunk table.")
 
-    return {"status": "success", "doc_id": doc_id}
+    return {"status": "success", "doc_name": doc_name}
