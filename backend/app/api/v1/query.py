@@ -99,7 +99,7 @@ async def query_documents(
     contexts = []
     for chunk in top_contexts:
         snippet = (
-            f"DocID: {chunk.doc_id}, ChunkID: {chunk.chunk_id}, "
+            f"Doc Name: {chunk.doc_name}, ChunkID: {chunk.chunk_id}, "
             f"Headers: {chunk.section_headers}, Pages: {chunk.pages}\n"
             f"{chunk.serialized_chunk}"
         )

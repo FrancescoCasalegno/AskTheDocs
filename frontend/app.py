@@ -40,10 +40,9 @@ def main():
                     files = {"file": (file_obj.name, file_obj.getvalue(), "application/pdf")}
                     response = requests.post(ingest_url, files=files)
                     response.raise_for_status()
+                    st.success(f"Successfully uploaded {len(uploaded_files)} files to database ✅")
             except requests.exceptions.RequestException as e:
                 st.error(f"Error ingesting {file_obj.name}: {e}")
-
-        st.success(f"Successfully uploaded {len(uploaded_files)} files to database ✅")
 
         # Update session_state
         st.session_state.uploaded_file_names = current_file_names
