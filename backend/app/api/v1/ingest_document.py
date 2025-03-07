@@ -71,7 +71,9 @@ async def ingest_document(
             serialized_chunks.append(serialized_chunk)
             async_tasks.append(embed_text(serialized_chunk))
         # 2. Run tasks concurrently
+        logger.info(f"Started embedding {len(async_tasks)} chunks...")
         embeddings = await asyncio.gather(*async_tasks)
+        logger.info(f"Successfully embedded all {len(embeddings)} chunks.")
         # 3. Create and add new rows to the database
         for chunk_obj, serialized_chunk, embedding_vector in zip(
             chunk_objects, serialized_chunks, embeddings
@@ -83,7 +85,7 @@ async def ingest_document(
                 doc_id=doc_id,
                 origin_filename=chunk_obj.meta.origin.filename or file.filename,
                 origin_uri=chunk_obj.meta.origin.uri or "",
-                section_headers=list(chunk_obj.meta.headings),
+                section_headers=list(chunk_obj.meta.headings or []),
                 pages=pages,
                 serialized_chunk=serialized_chunk,
                 embedding=embedding_vector,
