@@ -1,6 +1,8 @@
-<img src="askthedocs-logo.png" />
 
----
+<p align="center">
+  <img src="askthedocs-logo.png" width="400" alt="AskTheDocs Logo"/>
+</p>
+
 
 <p align="center">
   <!-- Technologies -->
