@@ -81,11 +81,13 @@ async def query_documents(
     # 2.2 Search vector database using the query embedding
     # We'll use .l2_distance(query_embedding) and order_by ascending
     distance = Chunk.embedding.l2_distance(retriever_query_embedding)
-    select_query = select(Chunk).order_by(distance.asc()).limit(req.top_k)
+    select_query = (
+        select(Chunk, distance.label("l2_distance")).order_by(distance.asc()).limit(req.top_k)
+    )
     result = await db.execute(select_query)
-    top_contexts = result.scalars().all()
+    top_distance_contexts = result.all()
 
-    if not top_contexts:
+    if not top_distance_contexts:
         logger.warning(f"No contexts found for query: {req.query}")
         logger.warning(f"result: {vars(result)}")
         return QueryResponse(
@@ -97,17 +99,25 @@ async def query_documents(
     # 2. Answer Generation
     # 2.1 Format context
     contexts = []
-    for chunk in top_contexts:
+    for i, (chunk, l2_dist) in enumerate(top_distance_contexts, start=1):
+        # Convert L2 distance to cosine similarity
+        # || a - b ||^2 = || a ||^2 + || b ||^2 - 2 * <a, b>
+        # And since we have normalized embeddings, || a || = || b || = 1, so:
+        # || a - b ||^2 = 2 - 2 * <a, b>
+        # And finally, notice that <a, b> = cosine similarity if a and b are normalized!
+        cosine_sim = 1 - l2_dist**2 / 2
         snippet = (
             f"Doc Name: {chunk.doc_name}, ChunkID: {chunk.chunk_id}, "
             f"Headers: {chunk.section_headers}, Pages: {chunk.pages}\n"
             f"{chunk.serialized_chunk}"
         )
+        logger.info(
+            f"Retrieved top-{i} context "
+            f"[L2-dist={l2_dist:.2f}; Cosine-sim={cosine_sim:.2f}]:\n{snippet}"
+        )
         contexts.append(snippet)
 
-    logger.info(f"Retrieved top_k contexts (k={len(contexts)})")
-    for i, c in enumerate(contexts, start=1):
-        logger.info(f"Context {i} / {len(contexts)}:\n{c}")
+    logger.info(f"Done retrieving top-k (k={len(contexts)}) contexts")
 
     # 2.2 Create prompt for LLM
     system_prompt = ai_prompts.QUESTION_ANSWERING_SYSTEM_PROMPT
@@ -131,5 +141,5 @@ async def query_documents(
     return QueryResponse(
         answer_text=answer_text,
         answer_sources=llm_answer.answer_sources,
-        top_k_retrieved=len(top_contexts),
+        top_k_retrieved=len(top_distance_contexts),
     )
