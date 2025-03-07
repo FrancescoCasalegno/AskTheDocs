@@ -32,5 +32,19 @@ services:
       - postgres
     restart: always
 
+  alembic-migrations:
+    build: ./backend
+    # Wait until Postgres is up
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    command: >
+      alembic upgrade head
+
+
 volumes:
   pgdata:
