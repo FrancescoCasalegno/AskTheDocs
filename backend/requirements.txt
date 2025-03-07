@@ -1,8 +1,10 @@
+alembic==1.15.1
 asyncpg==0.30.0
 docling==2.24.0
 fastapi==0.115.8
 openai==1.64.0
 pgvector==0.3.6
+psycopg2==3.2.5
 pydantic==2.10.6
 pydantic-settings==2.8.0
 python-multipart==0.0.20
