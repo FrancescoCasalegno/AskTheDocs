@@ -7,7 +7,7 @@ from app.db.session import get_db_session
 from app.utils.ai_utils import embed_text
 from app.utils.docling_utils import parse_and_chunk_pdf
 from docling.chunking import HybridChunker
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +18,6 @@ ingest_document_router = APIRouter()
 
 @ingest_document_router.post("/v1/ingest_document")
 async def ingest_document(
-    doc_id: str = Form(...),  # noqa: B008
     file: UploadFile = File(...),  # noqa: B008
     db: AsyncSession = Depends(get_db_session),  # noqa: B008
 ):
@@ -31,9 +30,9 @@ async def ingest_document(
     4) Replace existing doc_id data or inserts new
     5) Return success
     """
-    logger.info(f"Ingesting document with doc_id: {doc_id} and filename: {file.filename}")
-    # Read the PDF bytes
     pdf_bytes = await file.read()
+    doc_id = file.filename
+    logger.info(f"Ingesting document with doc_id: {doc_id} and filename: {file.filename}")
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty or invalid.")
     await file.close()
